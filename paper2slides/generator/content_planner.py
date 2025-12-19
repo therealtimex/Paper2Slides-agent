@@ -116,11 +116,15 @@ class ContentPlanner:
         api_key: str = None,
         base_url: str = None,
         model: str = "gpt-4o",
+        max_tokens: int = None,
     ):
         import os
         self.api_key = api_key or os.getenv("RAG_LLM_API_KEY", "")
         self.base_url = base_url or os.getenv("RAG_LLM_BASE_URL")
         self.model = model
+        # max_tokens: default 16000, override via RAG_LLM_MAX_TOKENS env or constructor
+        # Note: deepseek has 8192 limit, set RAG_LLM_MAX_TOKENS=8192 if using deepseek
+        self.max_tokens = max_tokens or int(os.getenv("RAG_LLM_MAX_TOKENS", "16000"))
         
         kwargs = {"api_key": self.api_key}
         if self.base_url:
@@ -288,11 +292,11 @@ class ContentPlanner:
             logger.info("Calling LLM with text only (no images)")
         
         try:
-            logger.info(f"Calling {self.model} with max_tokens=16000")
+            logger.info(f"Calling {self.model} with max_tokens={self.max_tokens}")
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": content}],
-                max_tokens=8192, // This restriction by deepseek. May be we should use env
+                max_tokens=self.max_tokens,
             )
             result = response.choices[0].message.content or ""
             logger.info(f"LLM returned {len(result)} characters")
